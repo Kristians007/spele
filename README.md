@@ -1,109 +1,113 @@
-<html>
- <head>
-  <title> My Melon Falling Game </title>
- </head>
+from tkinter import messagebox, Tk
+import pygame
+import sys
+import random
 
-<body>
-<canvas id="myCanvas" width=300 height=300 style="background:url('/img/etc/boardwalk.png'); background-size: cover">
-  </canvas> 
-<script>
+window_width = 500
+window_height = 500
+window = pygame.display.set_mode((window_width, window_height))
 
- var ctx = myCanvas.getContext("2d");
+columns = 25
+rows = 25
+box_width = window_width // columns
+box_height = window_height // rows
 
+clock = pygame.time.Clock()
 
- var bug_x = 0;
- var bug_y = 0;
- var BugImg = new Image();
- BugImg.src = "https://s2js.com/img/etc/ladybug.png";         // The bug
+grid = []
+snake= []
+apples = []
 
- var melon_x = 0;
- var melon_y = 0;
- var MelonImg = new Image();
- MelonImg.src = "https://s2js.com/img/etc/watermelon2.png";  // The melon
+class Box:
+    def __init__(self, i, j):
+        self.x = i
+        self.y = j
 
- var score = 0;
- var melon_speed = 3;
- var FPS = 40;                        // How many frames per second
- var time_remaining = 20;
+    def draw(self, win, color):
+        pygame.draw.rect(win, color, (self.x * box_width, self.y * box_height, box_width - 2, box_height - 2))
 
+for i in range(columns):
+    arr = []
+    for j in range(rows):
+        arr.append(Box(i, j))
+    grid.append(arr)
 
- function restart_game() {
-     // This gets called when the 'S' key is pressed and just sets 
-     // some important variables back to the start.
-     //
-     // Alternatively they could just reload the page
-     time_remaining = 20;
-     score = 0;
-     melon_speed = 3;
-     }
+for i in range(3):
+    snake.append(grid[10][10])
 
- function ImagesTouching(x1, y1, img1, x2, y2, img2) {
-          //
-          // This function detects whether two images are touching - very useful function
-          // 
-          if (x1 >= x2+img2.width || x1+img1.width <= x2) return false;   // too far to the side
-          if (y1 >= y2+img2.height || y1+img1.height <= y2) return false; // too far above/below
-          return true;                                                    // otherwise, overlap   
-          }
+def main():
+    x_delta, y_delta = 0, -1
+    x_pos, y_pos = 10, 10
 
+    run = True
+    while run:
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
- function Do_a_Frame () {
-    ctx.clearRect(0, 0, myCanvas.width, myCanvas.height);                 // clear the background
+        
+        user_input = pygame.key.get_pressed()
+        if user_input[pygame.K_LEFT] and x_delta != 1:
+            x_delta, y_delta = -1, 0
+        if user_input[pygame.K_RIGHT] and x_delta != -1:
+            x_delta, y_delta = 1, 0
+        if user_input[pygame.K_UP] and y_delta != 1:
+            x_delta, y_delta = 0, -1
+        if user_input[pygame.K_DOWN] and y_delta != -1:
+            x_delta, y_delta = 0, 1
 
-    ctx.fillStyle= "purple";
-    ctx.font = "20px Arial";
-    ctx.fillText("Score: " + score, 0, 20);                               // display the score
+        
+        x_pos += x_delta
+        y_pos += y_delta
 
+       
+        wall_hit = x_pos < 0 or y_pos < 0 or x_pos > 24 or y_pos > 24
+        if not wall_hit:
+            self_hit = grid[x_pos][y_pos] in snake
+        if self_hit or wall_hit:
+            Tk().wm_withdraw()
+            messagebox.showinfo("Spēle beigusies", "Tu zaudēji!")
+            run = False
 
-    bug_y = myCanvas.height - BugImg.height;                              // ensure bug always at bottom of canvas
-    ctx.drawImage(BugImg, bug_x, bug_y);                                  // and draw it
+        else:
+            head = grid[x_pos][y_pos]
+            snake.append(head)
+            remove_tail = True
 
-    ctx.fillText("Time Remaining: " + Math.round(time_remaining), 0, 45); // display time remaining
+            if len(apples) == 0:
+                spawn_locations = []
+                for i in range(columns):
+                    for j in range(rows):
+                        if not grid[i][j] in snake:
+                            spawn_locations.append(grid[i][j])
+                if len(spawn_locations) == 3:
+                    Tk().wm_withdraw()
+                    messagebox.showinfo("Uzvarētājs", "Tu uzvarēji!")
+                    run = False
+                apple = spawn_locations[random.randint(0, len(spawn_locations))]
+                apples.append(apple)
 
-    if (time_remaining <= 0) {                                            // if the time has run out
-          ctx.fillStyle= "red";
-          ctx.font = "bold 50px Arial";                                   // say so
-          ctx.textAlign="center";
-          ctx.fillText("Game Over", myCanvas.width / 2, myCanvas.height / 2);  
-          ctx.font = "bold 20px Arial";
-          ctx.fillText("Press S to play again", myCanvas.width / 2, (myCanvas.height / 2)+50);
-          ctx.textAlign="left";
-          }
-    else {
-          time_remaining = time_remaining - 1/FPS;                        // otherwise tick the time down
+            if len(apples) == 1:
+                if x_pos == apples[0].x and y_pos == apples[0].y:
+                    apples.pop()
+                    remove_tail = False
 
-          melon_y = melon_y + melon_speed;                                // move the melon down the screen
+            if remove_tail:
+                tail = snake.pop(0)
+                remove_tail = False
 
-          if (melon_y > myCanvas.height) {                                // if it's gone past the bottom
-              melon_y= 0;                                                 // move it back to the top
-              melon_x= Math.random() * (myCanvas.width - MelonImg.width); // pick a random x-position, always fully visible
-              }   
-          }
+        window.fill((0, 0, 0))
+        for i in range(columns):
+            for j in range(rows):
+                box = grid[i][j]
+                box.draw(window, (180, 180, 180))
+                if box in snake:
+                    box.draw(window, (0, 0, 255))
+                if box in apples:
+                    box.draw(window, (255, 0, 0))
 
-    ctx.drawImage(MelonImg, melon_x, melon_y);                            // draw the melon
-
-    if (ImagesTouching(bug_x, bug_y, BugImg, melon_x, melon_y, MelonImg)) {  // check for touching
-        score= score + 1;                                                    // add one to score
-        melon_speed = melon_speed + 0.5;                                     // and make it fall a bit faster
-        melon_x= -MelonImg.width;                                            // hide the melon so the score doesn't rocket
-        }
-    } 
-
- setInterval(Do_a_Frame, 1000/FPS);                                          // Call our frame renderer every this many milliseconds
-
-
- function MyKeyDownHandler (MyEvent) { 
-   if (MyEvent.keyCode == 37 && bug_x > 0) {bug_x = bug_x - 10;}                          // left
-   if (MyEvent.keyCode == 39 && bug_x+BugImg.width < myCanvas.width) {bug_x = bug_x+10;}  // right
-   if (MyEvent.keyCode == 83) restart_game();                                             // S to restart 
-   MyEvent.preventDefault();
-   }
-
- addEventListener("keydown", MyKeyDownHandler);                      // listen for keystrokes  
-
- myCanvas.width = window.innerWidth - 20;                            // fill the entire browser width
- myCanvas.height = window.innerHeight - 20;                          // fill the entire browser height
-
-</script>
-</body>
-</html>
+        pygame.display.flip()
+        clock.tick(8)
+main()
